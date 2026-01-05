@@ -5,12 +5,14 @@ import math
 pygame.init()
 pygame.display.set_caption("Omnibus")
 WIDTH, HEIGHT = 800, 600
-SCALE = WIDTH // 4
+SCALE = WIDTH // 6
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 WHITE = (255, 255, 255)
-font = pygame.Font("/usr/share/fonts/TTF/FiraCodeNerdFont-Bold.ttf", WIDTH // 20)
+font = pygame.Font("/usr/share/fonts/TTF/FiraCodeNerdFont-Bold.ttf", WIDTH // 30)
+point_radius = WIDTH // 100
+trayectory_width = point_radius // 4
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
 text = font.render("x⁵ - x + α = 0", True, BLACK)
@@ -41,7 +43,7 @@ def plot_complex(n: complex, color: tuple[int, int, int]):
     global screen
 
     x, y = complex_to_pixel(n)
-    pygame.draw.aacircle(screen, color, (x, y), 10)
+    pygame.draw.aacircle(screen, color, (x, y), point_radius)
 
 
 # TODO: compute singular points
@@ -64,6 +66,15 @@ initial_roots = []
 root_buffer = []
 mouse_buffer = []
 creating_trayectory = False
+# mininum distance to add point to trayectory (for efficiency)
+minimum_distance = 2
+# minimum points to consider trayectory
+minimum_points = 20
+
+show_permutations = False
+permutations_text = ""
+
+hide_permutations_event = pygame.USEREVENT + 1
 
 
 def single_permutation(initial_roots, final_roots, index) -> int:
@@ -77,16 +88,18 @@ def single_permutation(initial_roots, final_roots, index) -> int:
     return None
 
 
-def check_permutations(initial_roots, final_roots):
+def get_permutations(initial_roots, final_roots) -> str:
     # compare roots
+    permutations_text = "\nPermutations:\n"
     assert len(initial_roots) == len(final_roots)
-    print("\nPermutations:")
     for i in range(len(initial_roots)):
         permutation = single_permutation(initial_roots, final_roots, i)
         if not permutation:
             print(f"La raiz {i + 1} no ha permutado")
             continue
-        print(f"{i + 1} -> {permutation}")
+        permutations_text += f"{i + 1} -> {permutation}\n"
+
+    return permutations_text
 
 
 while True:
@@ -100,18 +113,28 @@ while True:
                 exit()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == pygame.BUTTON_LEFT:
+                # hide results if want new trayectory
+                if show_permutations:
+                    show_permutations = False
+
                 root_buffer.clear()
                 mouse_buffer.clear()
                 creating_trayectory = True
+        elif event.type == hide_permutations_event:
+            show_permutations = False
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == pygame.BUTTON_LEFT:
                 creating_trayectory = False
 
-                initial_roots = [pixel_to_complex(*points[0]) for points in root_buffer]
-                final_roots = [pixel_to_complex(*points[-1]) for points in root_buffer]
+                # if valid trayectory
+                if math.dist(mouse_buffer[0], mouse_buffer[-1]) < 5 and len(mouse_buffer) >= minimum_points:
+                    initial_roots = [pixel_to_complex(*points[0]) for points in root_buffer]
+                    final_roots = [pixel_to_complex(*points[-1]) for points in root_buffer]
 
-                check_permutations(initial_roots, final_roots)
+                    permutations_text = get_permutations(initial_roots, final_roots)
+                    show_permutations = True
+                    pygame.time.set_timer(hide_permutations_event, 5000)
 
     px, py = pygame.mouse.get_pos()
     alpha = pixel_to_complex(px, py)
@@ -122,7 +145,7 @@ while True:
     if creating_trayectory:
         mouse_point = (px, py)
         # add mouse point if not the same
-        if len(mouse_buffer) < 2 or math.dist(mouse_point, mouse_buffer[-1]) > 0.1:
+        if len(mouse_buffer) < 2 or math.dist(mouse_point, mouse_buffer[-1]) > minimum_distance:
             mouse_buffer.append((px, py))
 
         points = [complex_to_pixel(z) for z in roots]
@@ -134,7 +157,7 @@ while True:
                 closest_list = min(root_buffer, key=lambda buffer_list: math.dist(buffer_list[-1], point))
 
                 # only add if point is not the same
-                if len(closest_list) < 2 or math.dist(point, closest_list[-1]) > 0.1:
+                if len(closest_list) < 2 or math.dist(point, closest_list[-1]) > minimum_distance:
                     closest_list.append(point)
 
     # RENDER
@@ -143,14 +166,23 @@ while True:
         plot_complex(point, RED)
     for root in roots:
         plot_complex(complex(root), BLACK)
-    if len(root_buffer) > 0 and creating_trayectory:
+    if creating_trayectory:
         # show root trayectories
-        for points in root_buffer:
-            if len(points) >= 2:
-                pygame.draw.lines(surface=screen, color=RED, closed=False, points=points, width=5)
+        if len(root_buffer) > 0:
+            for points in root_buffer:
+                if len(points) >= 2:
+                    pygame.draw.lines(surface=screen, color=RED, closed=False, points=points, width=trayectory_width)
+
         # show mouse trayectory
         if len(mouse_buffer) >= 2:
-            pygame.draw.lines(surface=screen, color=BLUE, closed=False, points=mouse_buffer, width=5)
+            pygame.draw.lines(surface=screen, color=BLUE, closed=False, points=mouse_buffer, width=trayectory_width)
+
+    if show_permutations:
+        permutations_surface = font.render(permutations_text, True, BLACK)
+        tam_x, tam_y = permutations_surface.get_size()
+        x = (WIDTH - tam_x) // 2
+        y = (HEIGHT - tam_y) // 2
+        screen.blit(permutations_surface, (x, y))
 
     screen.blit(text, (tx, ty))
 
