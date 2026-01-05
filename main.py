@@ -44,8 +44,9 @@ def plot_complex(n: complex, color: tuple[int, int, int]):
     pygame.draw.aacircle(screen, color, (x, y), 10)
 
 
-def compute_singular_points(coefs: list[complex]) -> list[complex]:
-    derivative = np.polyder(coefs)
+# TODO: compute singular points
+# def compute_singular_points(coefs: list[complex]) -> list[complex]:
+#     derivative = np.polyder(coefs)
 
 
 alpha = 0 + 0j
@@ -57,8 +58,6 @@ singular_points = [
     4 / (5 * np.power(5, 1 / 4)) * 1j,
     -(4 / (5 * np.power(5, 1 / 4)) * 1j)
 ]
-
-compute_singular_points(coefs)
 
 # almacena los puntos de las trayectorias de los puntos cuando se mantiene el raton
 initial_roots = []
@@ -121,7 +120,11 @@ while True:
     roots = np.roots(coefs)
 
     if creating_trayectory:
-        mouse_buffer.append((px, py))
+        mouse_point = (px, py)
+        # add mouse point if not the same
+        if len(mouse_buffer) < 2 or math.dist(mouse_point, mouse_buffer[-1]) > 0.1:
+            mouse_buffer.append((px, py))
+
         points = [complex_to_pixel(z) for z in roots]
         for point in points:
             if len(root_buffer) < len(roots):
@@ -130,7 +133,9 @@ while True:
                 # find the list with the closest final point
                 closest_list = min(root_buffer, key=lambda buffer_list: math.dist(buffer_list[-1], point))
 
-                closest_list.append(point)
+                # only add if point is not the same
+                if len(closest_list) < 2 or math.dist(point, closest_list[-1]) > 0.1:
+                    closest_list.append(point)
 
     # RENDER
     screen.fill(WHITE)
