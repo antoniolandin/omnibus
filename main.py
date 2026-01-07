@@ -10,7 +10,7 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 WHITE = (255, 255, 255)
-font = pygame.Font("/usr/share/fonts/TTF/FiraCodeNerdFont-Bold.ttf", WIDTH // 30)
+font = pygame.Font("assets/FiraCodeNerdFont-Bold.ttf", WIDTH // 30)
 point_radius = WIDTH // 100
 trayectory_width = point_radius // 4
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -95,7 +95,7 @@ def get_permutations(initial_roots, final_roots) -> str:
     for i in range(len(initial_roots)):
         permutation = single_permutation(initial_roots, final_roots, i)
         if not permutation:
-            print(f"La raiz {i + 1} no ha permutado")
+            permutations_text += f"La raiz {i + 1} no ha permutado"
             continue
         permutations_text += f"{i + 1} -> {permutation}\n"
 
